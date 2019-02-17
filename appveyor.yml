@@ -1,0 +1,19 @@
+version: 1.0.{build}
+image: Visual Studio 2017
+build_script:
+- ps: >-
+    nuget restore "ChakraHosting.sln"
+
+    msbuild "ChakraHosting.sln" /m /verbosity:minimal /p:Configuration=Release
+
+    nuget pack "ChakraHosting\\ChakraHosting.nuspec" -Version $env:appveyor_build_version
+    
+artifacts:
+- path: '*.nupkg'
+  name: nuget
+deploy:
+- provider: Environment
+  name: ChakraHosting_nuget
+  on:
+    branch: master
+

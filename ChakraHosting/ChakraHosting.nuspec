@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>ChakraHosting</id>
+    <version>1.0.0</version>
+    <title>ChakraHosting</title>
+    <authors>Tlaster</authors>
+    <owners>Tlaster</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/ShibaJS/ChakraHosting/blob/master/LICENSE.md</licenseUrl>
+    <projectUrl>https://github.com/ShibaJS/ChakraHosting</projectUrl>
+    <description>ChakraHosting</description>
+  </metadata>
+  <files>
+    <file src="bin\Release\ChakraHosting.pri" target="lib\uap10.0\ChakraHosting.pri" />
+    <file src="bin\Release\ChakraHosting.pdb" target="lib\uap10.0\ChakraHosting.pdb" />
+    <file src="bin\Release\ChakraHosting.dll" target="lib\uap10.0\ChakraHosting.dll" />
+  </files>
+</package>
