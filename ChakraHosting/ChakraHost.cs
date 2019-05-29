@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,11 +12,10 @@ namespace ChakraHosting
         private static JavaScriptSourceContext _currentSourceContext = JavaScriptSourceContext.FromIntPtr(IntPtr.Zero);
         private static JavaScriptRuntime _runtime;
 
-        private static readonly BlockingCollection<JavaScriptValue> TaskQueue =
-            new BlockingCollection<JavaScriptValue>();
+        private static readonly Queue<JavaScriptValue> TaskQueue =
+            new Queue<JavaScriptValue>();
 
-        private static readonly JavaScriptPromiseContinuationCallback PromiseContinuationDelegate =
-            PromiseContinuationCallback;
+        private bool _isPromiseLooping = false;
 
         private readonly CancellationTokenSource _shutdownCts = new CancellationTokenSource();
         private JavaScriptContext _context;
@@ -28,8 +29,9 @@ namespace ChakraHosting
 
         public void Dispose()
         {
-            _runtime.Dispose();
             _shutdownCts.Cancel();
+            _context.Release();
+            _runtime.Dispose();
         }
 
         public void Init()
@@ -37,8 +39,7 @@ namespace ChakraHosting
             Native.ThrowIfError(Native.JsCreateRuntime(JavaScriptRuntimeAttributes.EnableExperimentalFeatures, null, out _runtime));
             Native.ThrowIfError(Native.JsCreateContext(_runtime, out _context));
             EnterContext();
-            Native.ThrowIfError(Native.JsSetPromiseContinuationCallback(PromiseContinuationDelegate, IntPtr.Zero));
-            StartPromiseTaskLoop(_shutdownCts.Token);
+            Native.ThrowIfError(Native.JsSetPromiseContinuationCallback(PromiseContinuationCallback, IntPtr.Zero));
             //Native.ThrowIfError(Native.JsProjectWinRTNamespace("Windows"));
             Native.ThrowIfError(Native.JsGetGlobalObject(out var global));
             GlobalObject = global;
@@ -77,32 +78,39 @@ namespace ChakraHosting
             return result;
         }
 
-        private static void PromiseContinuationCallback(JavaScriptValue task, IntPtr callbackState)
+        private void PromiseContinuationCallback(JavaScriptValue task, IntPtr callbackState)
         {
-            TaskQueue.Add(task);
+            TaskQueue.Enqueue(task);
             task.AddRef();
+            StartPromiseTaskLoop();
         }
 
-        private void StartPromiseTaskLoop(CancellationToken token)
+        private void StartPromiseTaskLoop()
         {
+            if (_isPromiseLooping)
+            {
+                return;
+            }
+
+            _isPromiseLooping = true;
             Task.Factory.StartNew(() =>
                 {
-                    while (true)
+                    while (TaskQueue.Count != 0)
+                    {
                         try
                         {
-                            if (TaskQueue.Count == 0) continue;
-                            var task = TaskQueue.Take(token);
-                            EnterContext();
+                            var task = TaskQueue.Dequeue();
                             task.CallFunction(GlobalObject);
                             task.Release();
-                            LeaveContext();
                         }
                         catch (OperationCanceledException e)
                         {
                             return;
                         }
+                    }
+
+                    _isPromiseLooping = false;
                 }
-                , token
             );
         }
     }
