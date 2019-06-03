@@ -93,25 +93,21 @@ namespace ChakraHosting
             }
 
             _isPromiseLooping = true;
-            Task.Factory.StartNew(() =>
+            while (TaskQueue.Count != 0)
+            {
+                try
                 {
-                    while (TaskQueue.Count != 0)
-                    {
-                        try
-                        {
-                            var task = TaskQueue.Dequeue();
-                            task.CallFunction(GlobalObject);
-                            task.Release();
-                        }
-                        catch (OperationCanceledException e)
-                        {
-                            return;
-                        }
-                    }
-
-                    _isPromiseLooping = false;
+                    var task = TaskQueue.Dequeue();
+                    task.CallFunction(GlobalObject);
+                    task.Release();
                 }
-            );
+                catch (OperationCanceledException e)
+                {
+                    return;
+                }
+            }
+
+            _isPromiseLooping = false;
         }
     }
 }

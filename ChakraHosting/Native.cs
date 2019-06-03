@@ -6,7 +6,7 @@ namespace ChakraHosting
     /// <summary>
     ///     Native interfaces.
     /// </summary>
-    public static class Native
+    internal static class Native
     {
         private const string DllName = "Chakra.dll";
 
